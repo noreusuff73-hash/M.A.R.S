@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarsWalk HUD - Boxwork traverse, Gale Crater</title>
+<style>
+  :root{
+    --bg:#15100d; --panel:#1f1813; --panel2:#2a211a; --line:#43352a;
+    --text:#efe4d6; --dim:#b3a18d; --accent:#6fd3c4; --route:#ffd166;
+    --ok:#6fd3c4; --warn:#ffc43d; --bad:#ef5b5b;
+    --ui:"Bahnschrift","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.45}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.01em}
+  .top p{margin:2px 0 0;color:var(--dim);font-size:13px}
+  .top-right{display:flex;align-items:center;gap:12px}
+  .badge{border:1px solid var(--warn);color:var(--warn);padding:3px 9px;border-radius:3px;font-size:12px}
+  #clock{color:var(--accent);font-size:15px}
+  #speBanner{background:var(--bad);color:#1a0a0a;padding:9px 18px;font-weight:600}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:14px;padding:12px 14px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:11px 13px;margin-bottom:10px}
+  .card h2{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--accent)}
+  .note{margin:0 0 8px;color:var(--dim);font-size:12.5px}
+  .lyr{display:grid;grid-template-columns:1fr 84px;gap:8px;align-items:center;margin-bottom:6px}
+  label{display:flex;align-items:center;gap:7px;cursor:pointer}
+  input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=number],select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:5px 7px;font:inherit;width:100%}
+  .field{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;margin-bottom:7px}
+  button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font:inherit;cursor:pointer;width:100%;margin-bottom:7px;text-align:left}
+  button:hover{border-color:var(--accent)}
+  button.on{background:var(--bad);color:#1a0a0a;border-color:var(--bad);font-weight:600}
+  :focus-visible{outline:2px solid var(--route);outline-offset:2px}
+  .mapbox{border:1px solid var(--line);border-radius:6px;background:#000;overflow:hidden}
+  #map{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:none;cursor:crosshair}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:8px 2px;color:var(--dim);font-size:12.5px;min-height:34px}
+  .chip{display:inline-flex;align-items:center;gap:6px}
+  .chip i{width:13px;height:13px;border-radius:2px;display:inline-block;border:1px solid rgba(255,255,255,.25)}
+  .grad{display:inline-block;width:120px;height:11px;border-radius:2px;background:linear-gradient(90deg,#283cc8,#1ea0dc,#78dca0,#fadc50,#fa5a32)}
+  .readout{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:7px 10px;font-size:12.5px;color:var(--text);min-height:34px}
+  dl{margin:0}
+  dl div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted var(--line)}
+  dl div:last-child{border-bottom:0}
+  dt{color:var(--dim)} dd{margin:0;text-align:right}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+  th,td{text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:500}
+  td.r,th.r{text-align:right}
+  td.sel,th.sel{background:var(--panel2)}
+  table button{background:none;border:0;padding:0;margin:0;width:auto;font:inherit;font-weight:700;text-align:right;cursor:pointer;text-decoration:underline}
+  .bar{height:10px;background:var(--panel2);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin:6px 0 2px}
+  .bar span{display:block;height:100%;background:var(--ok);width:0}
+  .status{display:inline-block;padding:2px 9px;border-radius:3px;font-weight:700;color:#14100d}
+  .status.ok{background:var(--ok)} .status.warn{background:var(--warn)} .status.bad{background:var(--bad)}
+  #prof{width:100%;height:auto;display:block}
+  #povBox canvas,#povBox img{width:100%;height:auto;display:block;border-radius:4px;border:1px solid var(--line);margin-bottom:8px}
+  .small{font-size:12px;color:var(--dim)}
+  .lgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .lbtn{position:relative;display:block;margin:0;cursor:pointer}
+  .lbtn input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+  .lbtn span{display:block;text-align:center;padding:13px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font-weight:500;line-height:1.2}
+  .lbtn:hover span{border-color:#ff7a45}
+  .lbtn input:checked+span{background:#ff7a45;border-color:#ff7a45;color:#1a0f0a;font-weight:700}
+  .lbtn input:focus-visible+span{outline:2px solid var(--route);outline-offset:2px}
+  .oprow{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-top:8px;color:var(--dim);font-size:12.5px}
+  .oprow[hidden]{display:none}
+  details.card>summary,details.sub>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::after{content:"+";color:var(--dim);font-family:var(--mono);font-size:16px}
+  details[open]>summary::after{content:"\2212"}
+  details.card>summary{color:var(--accent);font-size:15px}
+  details.card[open]>summary{margin-bottom:10px}
+  details.sub{border-top:1px solid var(--line);padding:9px 0 4px}
+  details.sub>summary{font-size:13.5px;color:var(--text)}
+  details.sub[open]>summary{margin-bottom:9px}
+  #adv>summary{color:var(--text)}
+  .ropts{display:grid;gap:7px}
+  .ropt{display:grid;grid-template-columns:20px 1fr auto;gap:1px 9px;align-items:center;border:1px solid var(--line);border-radius:5px;padding:8px 10px;cursor:pointer}
+  .ropt input{grid-row:span 2}
+  .ropt.sel{border-color:var(--accent);background:var(--panel2)}
+  .rname{font-weight:700}
+  .rmeta{text-align:right}
+  .rsub{color:var(--dim);font-size:12.5px}
+  .rrad{text-align:right;font-size:12.5px}
+  .rrad.ok{color:var(--ok)} .rrad.warn{color:var(--warn)} .rrad.bad{color:var(--bad);font-weight:700}
+  @media (max-width:1000px){
+    .layout{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>MarsWalk HUD</h1>
+    <p>Boxwork traverse, Mount Sharp region, Gale Crater</p>
+  </div>
+  <div class="top-right">
+    <span class="badge" title="Terrain, minerals and temperatures on this map are generated placeholders. Swap in real NASA layers using CONFIG.data in the script.">Synthetic demo data</span>
+  </div>
+</header>
+<div id="speBanner" hidden></div>
+
+<main class="layout">
+
+  <!-- Map and legend -->
+  <section class="center">
+    <div class="mapbox"><canvas id="map" width="800" height="800" aria-label="Map of the traverse area with route and hazard layers"></canvas></div>
+    <div id="legend" class="legend"></div>
+  </section>
+
+  <aside>
+    <details class="card" open>
+      <summary>Layers</summary>
+      <div class="lgrid">
+        <label class="lbtn"><input type="checkbox" id="L_slope" checked><span>Slope hazards</span></label>
+        <label class="lbtn"><input type="checkbox" id="L_spectral"><span>Mineralogy</span></label>
+        <label class="lbtn"><input type="checkbox" id="L_thermal"><span>Surface temperature</span></label>
+        <label class="lbtn"><input type="checkbox" id="L_route" checked><span>Route and stops</span></label>
+      </div>
+      <label class="oprow"><span>Slope opacity</span><input type="range" id="O_slope" min="0" max="100" value="75"></label>
+      <label class="oprow"><span>Mineralogy opacity</span><input type="range" id="O_spectral" min="0" max="100" value="70"></label>
+      <label class="oprow"><span>Temperature opacity</span><input type="range" id="O_thermal" min="0" max="100" value="70"></label>
+    </details>
+
+    <details class="card" open>
+      <summary>Route choice</summary>
+      <div id="ropts" class="ropts"></div>
+      <label style="margin-top:10px"><input type="checkbox" id="showAll" checked> Show all three on the map</label>
+    </details>
+
+    <details class="card" open>
+      <summary>Weather</summary>
+      <div class="field" style="grid-template-columns:1fr"><select id="wx" aria-label="Weather scenario"></select></div>
+      <p style="margin:0">Outlook: <span id="wxStatus" class="status ok">Go</span> <span id="wxMain" class="mono"></span></p>
+    </details>
+
+    <details class="card" id="adv">
+      <summary>Advanced information</summary>
+
+      <details class="sub">
+        <summary>Route comparison</summary>
+        <table id="cmp"></table>
+        <p class="small" id="cmpNote" style="margin-top:8px"></p>
+      </details>
+
+      <details class="sub">
+        <summary id="sumTitle">Mission summary</summary>
+        <dl id="sum"></dl>
+        <table id="legs"></table>
+      </details>
+
+      <details class="sub">
+        <summary>Radiation</summary>
+        <div class="field"><label for="doseRate">Surface dose (mSv/day)</label><input type="number" id="doseRate" value="0.64" min="0" step="0.01"></div>
+        <div class="field"><label for="doseBudget">EVA budget (mSv)</label><input type="number" id="doseBudget" value="0.2" min="0.01" step="0.01"></div>
+        <dl id="doseOut"></dl>
+        <div class="bar"><span id="doseBar"></span></div>
+        <p class="small" id="doseNote"></p>
+        <button id="btnSpe" aria-pressed="false">Simulate solar particle event</button>
+      </details>
+
+      <details class="sub">
+        <summary>Weather details</summary>
+        <dl id="wxOut"></dl>
+      </details>
+
+      <details class="sub">
+        <summary>Elevation along the route</summary>
+        <canvas id="prof" width="600" height="220" aria-label="Elevation profile along the route"></canvas>
+      </details>
+
+      <details class="sub">
+        <summary>Selected stop</summary>
+        <p class="note">Click a numbered stop on the map to choose it.</p>
+        <h3 id="stopTitle" style="margin:0 0 8px;font-size:14px">Stop</h3>
+        <div id="povBox"></div>
+        <dl id="stopOut"></dl>
+        <p class="small" id="stopGoal" style="margin-top:8px"></p>
+      </details>
+
+      <details class="sub">
+        <summary>Slope limits and pace</summary>
+        <div class="field"><label for="caut">Caution from (deg)</label><input type="number" id="caut" value="12" min="3" max="30"></div>
+        <div class="field"><label for="nogo">No-go from (deg)</label><input type="number" id="nogo" value="20" min="5" max="45"></div>
+        <div class="field"><label for="speed">Walking speed (km/h)</label><input type="number" id="speed" value="2" min="0.5" max="5" step="0.5"></div>
+        <p class="note">Placeholder limits. Replace them with limits from your suit and rover assumptions.</p>
+      </details>
+
+      <details class="sub">
+        <summary>Map tools</summary>
+        <label style="margin-bottom:8px"><input type="checkbox" id="L_grid"> Grid and scale</label>
+        <button id="btnRoute">Recalculate routes</button>
+        <button id="btnReset">Reset stops</button>
+        <p class="note">Tip: drag any numbered stop on the map. It snaps to safe ground and the routes update.</p>
+        <p class="small" style="margin:0 0 4px">Ground under the pointer</p>
+        <div id="readout" class="readout mono">Move the pointer over the map.</div>
+      </details>
+    </details>
+  </aside>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ==========================================================
+   CONFIG  - edit this section to use your own NASA data
+   ----------------------------------------------------------
+   data.optical   : image URL (e.g. a HiRISE/CTX export from Mars Trek), north-up, square crop
+   data.spectral  : image URL with a transparent PNG showing mineral classes (e.g. CRISM export)
+   data.elevation : grayscale image (white = high). Set elevMin/elevMax to real metres.
+   Use relative paths like "data/optical.png". For elevation, run the page with the
+   VS Code "Live Server" extension (browsers block reading pixels from file:// images).
+   stops[].pov    : URL of a Curiosity Mastcam/Navcam photo near that stop. Add the credit text.
+   ========================================================== */
+const CONFIG = {
+  N: 320,              // grid cells per side
+  SIZE_M: 3000,        // map width and height in metres
+  SEED: 7,
+  data: { optical: "", spectral: "", elevation: "", elevMin: 0, elevMax: 120 },
+  stops: [
+    { name:"Habitat and rover base", short:"Base", x:.14, y:.84, sci:0,
+      goal:"Start, resupply and abort point for every leg of the walk.", pov:"", credit:"" },
+    { name:"Boxwork ridge contact", short:"Ridge contact", x:.38, y:.66, sci:25,
+      goal:"Sample where a ridge meets the hollow beside it, to test whether the ridge rock is harder than its surroundings.", pov:"", credit:"" },
+    { name:"Clay-bearing hollow", short:"Clay hollow", x:.60, y:.44, sci:30,
+      goal:"Check the clay signal seen from orbit and photograph any layering in the hollow floor.", pov:"", credit:"" },
+    { name:"Sulfate ridge outcrop", short:"Sulfate ridge", x:.78, y:.24, sci:35,
+      goal:"Compare ridge minerals with the hollow sample to learn how groundwater moved through the rock.", pov:"", credit:"" },
+    { name:"Windblown ripple field", short:"Ripples", x:.48, y:.22, sci:20,
+      goal:"Measure ripple spacing, check how much dust covers the ground, and judge how well the surface carries a rover.", pov:"", credit:"" }
+  ]
+};
+
+/* Three ways to walk the same stops. cost(slope, cautionLimit, noGoLimit) is a time multiplier per step.
+   min is the smallest value cost() can return (keeps the search correct). */
+const PROFILES = {
+  fast:{ label:"Fastest",  color:"#ffd166", min:1,  cost:(s,c,n)=>1+s/15 },
+  safe:{ label:"Safest",   color:"#7aa2ff", min:1,  cost:(s,c,n)=>1+15*(s/c)**2 },
+  hard:{ label:"Hardest",  color:"#ff8c42", min:.3, cost:(s,c,n)=>Math.max(.3,1.4-s/n) }
+};
+const WEATHER = {
+  clear:{ label:"Clear sky", press:745, tau:0.4, wind:5,  uv:"Moderate" },
+  hazy: { label:"Hazy, rising dust", press:760, tau:1.0, wind:10, uv:"Lower" },
+  storm:{ label:"Regional dust storm", press:790, tau:3.0, wind:22, uv:"Low" }
+};
+
+/* ---------- helpers ---------- */
+const N = CONFIG.N, SIZE = CONFIG.SIZE_M, CELL = SIZE/(N-1), S = CONFIG.SEED;
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
+const smoothstep = (a,b,x) => { const t = clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+const fmtMin = m => { m = Math.round(m); return m >= 60 ? Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")+" min" : m+" min"; };
+const sun = h => Math.max(0, Math.sin(Math.PI*(h-6)/12));
+
+function hash(ix,iy,s){
+  let h = Math.imul(ix,374761393) ^ Math.imul(iy,668265263) ^ Math.imul(s,1442695041);
+  h = Math.imul(h ^ (h>>>13), 1274126177); h ^= h>>>16;
+  return (h>>>0)/4294967296;
+}
+function vnoise(x,y,s){
+  const ix=Math.floor(x), iy=Math.floor(y), fx=x-ix, fy=y-iy;
+  const a=hash(ix,iy,s), b=hash(ix+1,iy,s), c=hash(ix,iy+1,s), d=hash(ix+1,iy+1,s);
+  const u=fx*fx*(3-2*fx), v=fy*fy*(3-2*fy);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(x,y,s,oct=4){
+  let amp=.5,f=1,sum=0,norm=0;
+  for(let i=0;i<oct;i++){ sum+=amp*vnoise(x*f,y*f,s+i*17); norm+=amp; amp*=.5; f*=2; }
+  return sum/norm;
+}
+function seeded(seed){ let s=seed>>>0; return () => (s = (Math.imul(s,1664525)+1013904223)>>>0)/4294967296; }
+
+/* ---------- data arrays ---------- */
+const H = new Float32Array(N*N), SL = new Float32Array(N*N), SHADE = new Float32Array(N*N);
+const RIDGE = new Float32Array(N*N), INERT = new Float32Array(N*N), TEMP = new Float32Array(N*N);
+const MIN = new Uint8Array(N*N), BLOCK = new Uint8Array(N*N);
+const boulders = [];
+const layers = {};
+for (const k of ["optical","slope","spectral","thermal"]) { layers[k]=document.createElement("canvas"); layers[k].width=layers[k].height=N; }
+const MINERALS = ["No strong signal","Clay minerals","Sulfate minerals","Iron oxides"];
+const MINCOL = [null,[79,209,232],[224,92,240],[250,204,21]];
+let tmin=-90, tmax=0, hour=13, spe=false, selected=1, opticalOverride=false, mode="fast";
+const stops = CONFIG.stops.map(s => ({...s}));
+const route = { legs:[], abort:[] };
+
+/* ---------- terrain generation (placeholder for real DEM) ---------- */
+function generateTerrain(){
+  const ang=.38, ca=Math.cos(ang), sa=Math.sin(ang), sp=.085, w=26;
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){
+    const k=j*N+i, u=i/(N-1), v=j/(N-1);
+    let h = 45*(.6*u+.4*(1-v));
+    h += fbm(u*4,v*4,S,4)*16 + fbm(u*18,v*18,S+9,3)*2.2;
+    const wu = u+(fbm(u*3,v*3,S+3,3)-.5)*.07, wv = v+(fbm(u*3+5,v*3+5,S+5,3)-.5)*.07;
+    const ru=(wu*ca-wv*sa)/sp, rv=(wu*sa+wv*ca)/sp;
+    const du=Math.abs(ru-Math.round(ru))*sp*SIZE, dv=Math.abs(rv-Math.round(rv))*sp*SIZE;
+    const ridge=Math.max(Math.exp(-((du/w)**2)), Math.exp(-((dv/w)**2)));
+    const mask=smoothstep(.25,.6,.6*u+.4*(1-v));
+    RIDGE[k]=ridge*mask;
+    h += RIDGE[k]*11;
+    h += 55*smoothstep(.60,.64,u+v);           // steep scarp in the north-west corner
+    H[k]=h;
+    INERT[k]=clamp(.35+RIDGE[k]*.6+(fbm(u*7,v*7,S+41,3)-.5)*.5,0,1);
+    const c=fbm(u*4+2,v*4+2,S+31,3), fe=fbm(u*7,v*7,S+57,3);
+    let m=0;
+    if(RIDGE[k]>.45) m=2; else if(c>.56 && RIDGE[k]<.25 && mask>.2) m=1; else if(fe>.66) m=3;
+    MIN[k]=m;
+  }
+  const r=seeded(S+99);
+  for(let q=0;q<55;q++){
+    boulders.push({ i:Math.floor(r()*N), j:Math.floor(r()*N), r:.8+r()*1.5 });
+  }
+  for(const b of boulders){
+    const R=Math.ceil(b.r);
+    for(let dj=-R;dj<=R;dj++) for(let di=-R;di<=R;di++){
+      const i=b.i+di, j=b.j+dj;
+      if(i<0||j<0||i>=N||j>=N) continue;
+      if(Math.hypot(di,dj)<=b.r) BLOCK[j*N+i]=1;
+    }
+  }
+}
+
+const LV = (()=>{ const x=-.55,y=-.55,z=.63,l=Math.hypot(x,y,z); return [x/l,y/l,z/l]; })();
+function computeSlopeShade(){
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){
+    const k=j*N+i, i0=Math.max(i-1,0), i1=Math.min(i+1,N-1), j0=Math.max(j-1,0), j1=Math.min(j+1,N-1);
+    const dx=(H[j*N+i1]-H[j*N+i0])/((i1-i0)*CELL), dy=(H[j1*N+i]-H[j0*N+i])/((j1-j0)*CELL);
+    SL[k]=Math.atan(Math.hypot(dx,dy))*57.2958;
+    const len=Math.hypot(dx,dy,1);
+    SHADE[k]=clamp(((-dx*LV[0]-dy*LV[1]+LV[2])/len)/LV[2],.2,1.5);
+  }
+}
+
+/* ---------- layer builders ---------- */
+function buildOptical(){
+  if(opticalOverride) return;
+  const g=layers.optical.getContext("2d"), img=g.createImageData(N,N), d=img.data;
+  const fac=new Float32Array(N*N).fill(1);
+  for(const b of boulders){
+    const R=Math.ceil(b.r)+1;
+    for(let dj=-R;dj<=R;dj++) for(let di=-R;di<=R;di++){
+      const i=b.i+di, j=b.j+dj; if(i<0||j<0||i>=N||j>=N) continue;
+      const dist=Math.hypot(di,dj); if(dist>b.r) continue;
+      let f=.35+.5*(dist/b.r); if(di+dj<0) f*=1.25;
+      fac[j*N+i]=Math.min(fac[j*N+i],f);
+    }
+  }
+  for(let j=0;j<N;j++) for(let i=0;i<N;i++){
+    const k=j*N+i, u=i/(N-1), v=j/(N-1);
+    const alb=.9+.2*fbm(u*12,v*12,S+70,3), t=clamp(RIDGE[k]*1.5,0,1);
+    const sh=SHADE[k]*.85*fac[k]*(.92+.16*hash(i,j,5))*alb;
+    d[k*4]=clamp((170+(150-170)*t)*sh,0,255);
+    d[k*4+1]=clamp((104+(128-104)*t)*sh,0,255);
+    d[k*4+2]=clamp((66+(108-66)*t)*sh,0,255);
+    d[k*4+3]=255;
+  }
+  g.putImageData(img,0,0);
+}
+function buildSlope(){
+  const g=layers.slope.getContext("2d"), img=g.createImageData(N,N), d=img.data;
+  const caut=+$("caut").value, nog=+$("nogo").value;
+  for(let k=0;k<N*N;k++){
+    const s=SL[k]; let c;
+    if(BLOCK[k]) c=[239,91,91,235]; else if(s>=nog) c=[239,91,91,205];
+    else if(s>=caut) c=[255,196,61,175]; else c=[60,190,170,55];
+    d[k*4]=c[0]; d[k*4+1]=c[1]; d[k*4+2]=c[2]; d[k*4+3]=c[3];
+  }
+  g.putImageData(img,0,0);
+}
+function buildSpectral(){
+  const g=layers.spectral.getContext("2d"), img=g.createImageData(N,N), d=img.data;
+  for(let k=0;k<N*N;k++){
+    const c=MINCOL[MIN[k]]; if(!c) continue;
+    d[k*4]=c[0]; d[k*4+1]=c[1]; d[k*4+2]=c[2]; d[k*4+3]=215;
+  }
+  g.putImageData(img,0,0);
+}
+const RAMP=[[-90,[40,60,200]],[-65,[30,160,220]],[-40,[120,220,160]],[-20,[250,220,80]],[0,[250,90,50]]];
+function ramp(t){
+  if(t<=RAMP[0][0]) return RAMP[0][1];
+  for(let i=1;i<RAMP.length;i++){
+    if(t<=RAMP[i][0]){
+      const [t0,c0]=RAMP[i-1], [t1,c1]=RAMP[i], f=(t-t0)/(t1-t0);
+      return c0.map((c,q)=>c+(c1[q]-c)*f);
+    }
+  }
+  return RAMP[RAMP.length-1][1];
+}
+function buildThermal(){
+  const g=layers.thermal.getContext("2d"), img=g.createImageData(N,N), d=img.data, s=sun(hour);
+  tmin=1e9; tmax=-1e9;
+  for(let k=0;k<N*N;k++){
+    const I=INERT[k];
+    const T=-85+6*I*(1-s)+74*s*(1.1-.35*I)+(SHADE[k]-.85)*10*s;
+    TEMP[k]=T; tmin=Math.min(tmin,T); tmax=Math.max(tmax,T);
+    const c=ramp(T); d[k*4]=c[0]; d[k*4+1]=c[1]; d[k*4+2]=c[2]; d[k*4+3]=255;
+  }
+  g.putImageData(img,0,0);
+}
+
+/* ---------- snapping stops to safe ground ---------- */
+function snap(s){
+  const ci=Math.round(s.x*(N-1)), cj=Math.round(s.y*(N-1)), caut=+$("caut").value;
+  for(let r=0;r<=30;r++){
+    let best=null, bs=1e9;
+    for(let dj=-r;dj<=r;dj++) for(let di=-r;di<=r;di++){
+      if(Math.max(Math.abs(di),Math.abs(dj))!==r) continue;
+      const i=ci+di, j=cj+dj; if(i<1||j<1||i>=N-1||j>=N-1) continue;
+      const k=j*N+i; if(BLOCK[k]||SL[k]>=caut) continue;
+      const dd=di*di+dj*dj; if(dd<bs){ bs=dd; best=[i,j]; }
+    }
+    if(best){ s.x=best[0]/(N-1); s.y=best[1]/(N-1); return; }
+  }
+}
+
+/* ---------- route finding (A*) ---------- */
+class Heap{
+  constructor(){ this.a=[]; }
+  get size(){ return this.a.length; }
+  push(f,n){
+    const a=this.a; a.push([f,n]); let i=a.length-1;
+    while(i>0){ const p=(i-1)>>1; if(a[p][0]<=a[i][0]) break; [a[p],a[i]]=[a[i],a[p]]; i=p; }
+  }
+  pop(){
+    const a=this.a, top=a[0], last=a.pop();
+    if(a.length){
+      a[0]=last; let i=0;
+      for(;;){
+        const l=2*i+1, r=l+1; let m=i;
+        if(l<a.length && a[l][0]<a[m][0]) m=l;
+        if(r<a.length && a[r][0]<a[m][0]) m=r;
+        if(m===i) break; [a[m],a[i]]=[a[i],a[m]]; i=m;
+      }
+    }
+    return top;
+  }
+}
+function astar(A,B,key){
+  const start=A.j*N+A.i, goal=B.j*N+B.i;
+  const g=new Float32Array(N*N).fill(Infinity), came=new Int32Array(N*N).fill(-1), done=new Uint8Array(N*N);
+  const hp=new Heap(), caut=+$("caut").value, nog=+$("nogo").value, P=PROFILES[key||"fast"];
+  g[start]=0; hp.push(0,start);
+  while(hp.size){
+    const [,cur]=hp.pop(); if(done[cur]) continue; done[cur]=1;
+    if(cur===goal) break;
+    const ci=cur%N, cj=(cur/N)|0;
+    for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){
+      if(!di && !dj) continue;
+      const ni=ci+di, nj=cj+dj; if(ni<0||nj<0||ni>=N||nj>=N) continue;
+      const nk=nj*N+ni; if(done[nk]) continue;
+      if(nk!==goal && (SL[nk]>=nog || BLOCK[nk])) continue;
+      const step=(di&&dj?1.4142:1)*CELL;
+      const ng=g[cur]+step*P.cost(SL[nk],caut,nog);
+      if(ng<g[nk]){ g[nk]=ng; came[nk]=cur; hp.push(ng+Math.hypot(B.i-ni,B.j-nj)*CELL*P.min,nk); }
+    }
+  }
+  if(!done[goal]) return null;
+  const path=[]; for(let k=goal;k!==-1;k=came[k]) path.push(k);
+  return path.reverse();
+}
+function pathStats(path,kmh){
+  let dist=0,time=0,max=0,sum=0; const v=kmh*1000/60;
+  for(let q=1;q<path.length;q++){
+    const a=path[q-1], b=path[q];
+    const step=Math.hypot((a%N)-(b%N),((a/N)|0)-((b/N)|0))*CELL;
+    dist+=step; time+=step/v*(1+SL[b]/15); max=Math.max(max,SL[b]); sum+=SL[b];
+  }
+  return { dist, time, max, mean:sum/Math.max(1,path.length-1) };
+}
+function buildRoute(key){
+  const kmh=+$("speed").value||2, n=stops.length, caut=+$("caut").value;
+  const cs=stops.map(t=>({ i:Math.round(t.x*(N-1)), j:Math.round(t.y*(N-1)) }));
+  const R={ legs:[], dist:0, walk:0, max:0, fails:0, cautSteps:0 };
+  let sum=0, cnt=0;
+  for(let a=0;a<n;a++){
+    const b=(a+1)%n, path=astar(cs[a],cs[b],key), leg={ a, b, path };
+    if(path){
+      Object.assign(leg,pathStats(path,kmh));
+      R.dist+=leg.dist; R.walk+=leg.time; R.max=Math.max(R.max,leg.max);
+      sum+=leg.mean*(path.length-1); cnt+=path.length-1;
+      for(let q=1;q<path.length;q++) if(SL[path[q]]>=caut) R.cautSteps++;
+    } else {
+      R.fails++; leg.dist=Math.hypot(cs[a].i-cs[b].i,cs[a].j-cs[b].j)*CELL; leg.time=NaN; leg.max=NaN;
+    }
+    R.legs.push(leg);
+  }
+  R.mean=cnt?sum/cnt:0; R.cautPct=cnt?R.cautSteps/cnt*100:0;
+  R.sci=stops.reduce((t,x)=>t+x.sci,0); R.total=R.walk+R.sci;
+  return R;
+}
+function computeRoute(){
+  const kmh=+$("speed").value||2;
+  const cs=stops.map(t=>({ i:Math.round(t.x*(N-1)), j:Math.round(t.y*(N-1)) }));
+  route.sets={};
+  for(const key of Object.keys(PROFILES)) route.sets[key]=buildRoute(key);
+  Object.assign(route,route.sets[mode]);
+  route.abort=stops.map((t,idx)=>{ if(!idx) return null; const p=astar(cs[idx],cs[0],"fast"); return p?pathStats(p,kmh):null; });
+}
+function recommended(){
+  const ok=Object.keys(route.sets).filter(k=>!route.sets[k].fails);
+  if(!ok.length) return null;
+  const calm=ok.filter(k=>route.sets[k].cautPct===0), pool=calm.length?calm:ok;
+  return pool.reduce((x,y)=>route.sets[x].total<=route.sets[y].total?x:y);
+}
+function setMode(m){
+  mode=m; Object.assign(route,route.sets[m]);
+  document.querySelector('input[name=rmode][value='+m+']').checked=true;
+  updateSummary(); updateRadiation(); updateProfile(); render();
+}
+
+/* ---------- drawing the map ---------- */
+const cv=$("map"), ctx=cv.getContext("2d"), W=cv.width, HH=cv.height;
+const cellXY = k => [((k%N)/(N-1))*W, (((k/N)|0)/(N-1))*HH];
+
+function render(){
+  ctx.clearRect(0,0,W,HH);
+  ctx.imageSmoothingEnabled=true; ctx.drawImage(layers.optical,0,0,W,HH);
+  for(const [key,smooth] of [["slope",false],["spectral",false],["thermal",true]]){
+    if($("L_"+key).checked){
+      ctx.globalAlpha=$("O_"+key).value/100; ctx.imageSmoothingEnabled=smooth;
+      ctx.drawImage(layers[key],0,0,W,HH);
+    }
+  }
+  ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true;
+  if($("L_grid").checked) drawGrid();
+  if($("L_route").checked){ drawRoute(); drawStops(); }
+}
+function drawGrid(){
+  ctx.save(); ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,.22)";
+  ctx.fillStyle="rgba(255,255,255,.85)"; ctx.font="12px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  for(let m=500;m<SIZE;m+=500){
+    const p=m/SIZE*W;
+    ctx.beginPath(); ctx.moveTo(p,0); ctx.lineTo(p,HH); ctx.moveTo(0,p); ctx.lineTo(W,p); ctx.stroke();
+    ctx.fillText((m/1000)+" km",p+3,12); ctx.fillText((m/1000)+" km",3,p-3);
+  }
+  const len=500/SIZE*W; ctx.lineWidth=4; ctx.strokeStyle="#fff";
+  ctx.beginPath(); ctx.moveTo(20,HH-22); ctx.lineTo(20+len,HH-22); ctx.stroke();
+  ctx.fillStyle="#fff"; ctx.fillText("500 m",20,HH-30);
+  ctx.fillText("N",W-24,26); ctx.beginPath(); ctx.moveTo(W-20,50); ctx.lineTo(W-20,32); ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+}
+function strokeRoute(R,color,width,alpha){
+  ctx.save(); ctx.lineJoin="round"; ctx.lineCap="round"; ctx.globalAlpha=alpha;
+  for(const leg of R.legs){
+    ctx.beginPath();
+    if(leg.path){
+      leg.path.forEach((k,q)=>{ const [x,y]=cellXY(k); q?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.setLineDash([]); ctx.lineWidth=width+3; ctx.strokeStyle="rgba(0,0,0,.65)"; ctx.stroke();
+      ctx.lineWidth=width; ctx.strokeStyle=color; ctx.stroke();
+    } else {
+      ctx.moveTo(stops[leg.a].x*W,stops[leg.a].y*HH); ctx.lineTo(stops[leg.b].x*W,stops[leg.b].y*HH);
+      ctx.setLineDash([8,6]); ctx.lineWidth=3; ctx.strokeStyle="#ef5b5b"; ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawRoute(){
+  if(!route.sets) return;
+  if($("showAll").checked) for(const key of Object.keys(PROFILES)) if(key!==mode) strokeRoute(route.sets[key],PROFILES[key].color,2,.65);
+  strokeRoute(route,PROFILES[mode].color,3.5,1);
+}
+function drawStops(){
+  ctx.save(); ctx.font="bold 13px "+getComputedStyle(document.body).getPropertyValue("--ui");
+  stops.forEach((s,q)=>{
+    const x=s.x*W, y=s.y*HH;
+    ctx.beginPath(); ctx.arc(x,y,q===selected?15:12,0,Math.PI*2);
+    ctx.fillStyle="#15100d"; ctx.fill();
+    ctx.lineWidth=q===selected?4:2.5; ctx.strokeStyle=q===selected?"#ffd166":"#6fd3c4"; ctx.stroke();
+    ctx.fillStyle="#efe4d6"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(q===0?"H":String(q),x,y+.5);
+    ctx.textAlign="left"; const tw=ctx.measureText(s.short).width;
+    ctx.fillStyle="rgba(21,16,13,.82)"; ctx.fillRect(x+18,y-10,tw+10,20);
+    ctx.fillStyle="#efe4d6"; ctx.fillText(s.short,x+23,y+.5);
+  });
+  ctx.restore();
+}
+
+/* ---------- side panels ---------- */
+function updateLegend(){
+  const chip=(c,t)=>`<span class="chip"><i style="background:${c}"></i>${t}</span>`;
+  let h="";
+  if($("L_slope").checked){
+    const c=$("caut").value, n=$("nogo").value;
+    h+=chip("#3cbeaa",`Under ${c}°`)+chip("#ffc43d",`${c}° to ${n}°`)+chip("#ef5b5b",`${n}° or more, or boulder`);
+  }
+  if($("L_spectral").checked) h+=chip("rgb(79,209,232)","Clay")+chip("rgb(224,92,240)","Sulfate")+chip("rgb(250,204,21)","Iron oxide");
+  if($("L_thermal").checked) h+=`<span class="chip"><span class="grad"></span><span class="mono">${Math.round(tmin)} to ${Math.round(tmax)} °C</span></span>`;
+  if($("L_route").checked && $("showAll").checked) h+=Object.values(PROFILES).map(p=>chip(p.color,p.label+" route")).join("");
+  $("legend").innerHTML=h||"Optical base map only.";
+}
+function updateSummary(){
+  $("sumTitle").textContent="Mission summary: "+PROFILES[mode].label+" route";
+  const sumRows=[
+    ["Route length",(route.dist/1000).toFixed(2)+" km"],
+    ["Walking time",route.fails?"No safe path":fmtMin(route.walk)],
+    ["Science time",fmtMin(route.sci)],
+    ["Total outside",route.fails?"-":fmtMin(route.total)],
+    ["Steepest step",route.fails?"-":route.max.toFixed(1)+"°"],
+    ["Average slope",route.fails?"-":route.mean.toFixed(1)+"°"]
+  ];
+  $("sum").innerHTML=sumRows.map(r=>`<div><dt>${r[0]}</dt><dd class="mono">${r[1]}</dd></div>`).join("");
+  const nm=i=>i===0?"Base":i;
+  $("legs").innerHTML="<tr><th>Leg</th><th class='r'>Distance</th><th class='r'>Time</th><th class='r'>Max slope</th></tr>"+
+    route.legs.map(l=>`<tr><td>${nm(l.a)} to ${nm(l.b)}</td><td class="r mono">${(l.dist/1000).toFixed(2)} km</td>`+
+      `<td class="r mono">${l.path?fmtMin(l.time):"none"}</td><td class="r mono">${l.path?l.max.toFixed(0)+"°":"-"}</td></tr>`).join("")+
+    (route.fails?`<tr><td colspan="4" style="color:var(--bad)">${route.fails} leg(s) have no path under the no-go limit. Raise the limit or move a stop.</td></tr>`:"");
+}
+function updateRadiation(){
+  const rate=+$("doseRate").value||0, budget=+$("doseBudget").value||.01, mult=spe?5:1;
+  const perHour=rate/24*mult, hours=route.fails?0:route.total/60, dose=perHour*hours, pct=dose/budget*100;
+  $("doseOut").innerHTML=[
+    ["Dose rate",perHour.toFixed(3)+" mSv/h"],
+    ["Time outside",route.fails?"-":hours.toFixed(1)+" h"],
+    ["Route dose",route.fails?"-":dose.toFixed(3)+" mSv"],
+    ["Share of budget",route.fails?"-":Math.round(pct)+"%"]
+  ].map(r=>`<div><dt>${r[0]}</dt><dd class="mono">${r[1]}</dd></div>`).join("");
+  const bar=$("doseBar"); bar.style.width=clamp(pct,0,100)+"%";
+  bar.style.background=pct>=100?"var(--bad)":pct>=75?"var(--warn)":"var(--ok)";
+  $("doseNote").textContent=spe?"Solar particle event active: dose rate multiplied by 5 (illustrative).":"Default 0.64 mSv/day is an approximate Curiosity RAD surface value. Verify it before presenting.";
+  updateCompare();
+}
+function rating(R){
+  if(R.fails) return "No path";
+  if(R.max<+$("caut").value) return "Easy";
+  return R.cautPct<15?"Moderate":"Hard";
+}
+function updateCompare(){
+  if(!route.sets) return;
+  const rate=+$("doseRate").value||0, budget=+$("doseBudget").value||.01, mult=spe?5:1, rec=recommended();
+  const keys=Object.keys(PROFILES);
+  const hadFocus=document.activeElement&&document.activeElement.name==="rmode";
+  $("ropts").innerHTML=keys.map(k=>{
+    const R=route.sets[k], pct=R.fails?null:Math.round(rate/24*mult*R.total/60/budget*100);
+    const cls=pct===null?"":pct>=100?"bad":pct>=75?"warn":"ok";
+    return `<label class="ropt${k===mode?" sel":""}"><input type="radio" name="rmode" value="${k}"${k===mode?" checked":""}>`+
+      `<span class="rname" style="color:${PROFILES[k].color}">${PROFILES[k].label}${k===rec?" (recommended)":""}</span>`+
+      `<span class="rmeta mono">${R.fails?"No path":fmtMin(R.total)}</span>`+
+      `<span class="rsub">${rating(R)}</span>`+
+      `<span class="rrad ${cls} mono">${pct===null?"-":"Radiation "+pct+"%"+(pct>=100?", over limit":"")}</span></label>`;
+  }).join("");
+  if(hadFocus){ const c=$("ropts").querySelector("input:checked"); if(c) c.focus(); }
+  const head="<tr><th></th>"+keys.map(k=>`<th class="r${k===mode?" sel":""}"><button data-mode="${k}" style="color:${PROFILES[k].color}">${PROFILES[k].label}${k===rec?" *":""}</button></th>`).join("")+"</tr>";
+  const row=(name,f)=>`<tr><td>${name}</td>`+keys.map(k=>`<td class="r mono${k===mode?" sel":""}">${f(route.sets[k])}</td>`).join("")+"</tr>";
+  $("cmp").innerHTML=head+
+    row("Distance",R=>(R.dist/1000).toFixed(2)+" km")+
+    row("Walking",R=>R.fails?"-":fmtMin(R.walk))+
+    row("Total outside",R=>R.fails?"-":fmtMin(R.total))+
+    row("Steepest step",R=>R.fails?"-":R.max.toFixed(0)+"°")+
+    row("On caution ground",R=>R.fails?"-":Math.round(R.cautPct)+"%")+
+    row("Radiation budget",R=>R.fails?"-":Math.round(rate/24*mult*R.total/60/budget*100)+"%")+
+    row("Difficulty",rating);
+  $("cmpNote").textContent=rec
+    ? "* Recommended: "+PROFILES[rec].label+", the quickest route "+(route.sets[rec].cautPct===0?"that stays off caution ground.":"available (every option crosses caution ground).")+" Select a route name to view it."
+    : "No route has a safe path. Raise the no-go limit or move a stop.";
+}
+function updateWeather(){
+  const w=WEATHER[$("wx").value], s=sun(hour), air=-80+44*s*(1-.12*w.tau);
+  $("wxOut").innerHTML=[
+    ["Air temperature",Math.round(air)+" °C"],["Pressure",w.press+" Pa"],
+    ["Dust opacity (tau)",w.tau.toFixed(1)],["Wind",w.wind+" m/s"],["UV",w.uv]
+  ].map(r=>`<div><dt>${r[0]}</dt><dd class="mono">${r[1]}</dd></div>`).join("");
+  $("wxMain").textContent=Math.round(air)+" °C air";
+  let st="Go", cls="ok";
+  if(w.tau>=1.5||w.wind>=18){ st="No-go"; cls="bad"; } else if(w.tau>=.8||w.wind>=12){ st="Caution"; cls="warn"; }
+  const el=$("wxStatus"); el.textContent=st; el.className="status "+cls;
+}
+function updateProfile(){
+  const c=$("prof"), g=c.getContext("2d"), w=c.width, h=c.height;
+  g.clearRect(0,0,w,h);
+  const pts=[], marks=[]; let d=0;
+  route.legs.forEach((leg,li)=>{
+    if(!leg.path) return;
+    leg.path.forEach((k,q)=>{
+      if(q>0){ const a=leg.path[q-1]; d+=Math.hypot((k%N)-(a%N),((k/N)|0)-((a/N)|0))*CELL; }
+      pts.push([d,H[k],SL[k]]);
+    });
+    marks.push([d,(li+1)%stops.length]);
+  });
+  if(pts.length<2){ g.fillStyle="#b3a18d"; g.font="16px sans-serif"; g.fillText("No route to show",20,40); return; }
+  let lo=1e9,hi=-1e9; for(const p of pts){ lo=Math.min(lo,p[1]); hi=Math.max(hi,p[1]); }
+  const padL=46,padR=10,padT=22,padB=26, total=pts[pts.length-1][0], span=Math.max(hi-lo,10);
+  const X=v=>padL+v/total*(w-padL-padR), Y=v=>h-padB-(v-lo)/span*(h-padT-padB);
+  const caut=+$("caut").value, nog=+$("nogo").value;
+  g.lineWidth=3; g.lineCap="round";
+  for(let q=1;q<pts.length;q++){
+    g.strokeStyle=pts[q][2]>=nog?"#ef5b5b":pts[q][2]>=caut?"#ffc43d":"#6fd3c4";
+    g.beginPath(); g.moveTo(X(pts[q-1][0]),Y(pts[q-1][1])); g.lineTo(X(pts[q][0]),Y(pts[q][1])); g.stroke();
+  }
+  g.font="14px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  g.fillStyle="#b3a18d"; g.fillText(Math.round(hi)+" m",2,padT+4); g.fillText(Math.round(lo)+" m",2,h-padB);
+  g.fillText("0",padL,h-6); g.textAlign="right"; g.fillText((total/1000).toFixed(1)+" km",w-padR,h-6);
+  g.textAlign="center"; g.strokeStyle="rgba(255,255,255,.25)"; g.lineWidth=1;
+  for(const [m,idx] of marks){
+    g.beginPath(); g.moveTo(X(m),padT); g.lineTo(X(m),h-padB); g.stroke();
+    g.fillStyle="#efe4d6"; g.fillText(idx===0?"H":String(idx),X(m),padT-6);
+  }
+}
+function drawPOV(cvs,seed){
+  const g=cvs.getContext("2d"), w=cvs.width, h=cvs.height, hz=h*.52;
+  let gr=g.createLinearGradient(0,0,0,hz); gr.addColorStop(0,"#c9a27e"); gr.addColorStop(1,"#ecd0a8");
+  g.fillStyle=gr; g.fillRect(0,0,w,hz);
+  g.fillStyle="#a88163"; g.beginPath(); g.moveTo(0,hz);
+  for(let x=0;x<=w;x+=6) g.lineTo(x,hz-fbm(x/110+seed*3,.3,S+seed,3)*h*.34*(.35+.65*x/w));
+  g.lineTo(w,hz); g.fill();
+  gr=g.createLinearGradient(0,hz,0,h); gr.addColorStop(0,"#9a6a46"); gr.addColorStop(1,"#5c3a27");
+  g.fillStyle=gr; g.fillRect(0,hz,w,h-hz);
+  const r=seeded(seed*77+5);
+  for(let q=0;q<26;q++){
+    const t=r(), x=r()*w, y=hz+8+t*t*(h-hz-8), s=2+t*16;
+    g.fillStyle=`rgba(40,26,18,${.5+t*.4})`; g.beginPath(); g.ellipse(x,y,s*1.4,s*.8,0,0,Math.PI*2); g.fill();
+  }
+  g.fillStyle="rgba(21,16,13,.78)"; g.fillRect(0,h-34,w,34);
+  g.fillStyle="#efe4d6"; g.font="15px sans-serif"; g.fillText("Placeholder view. Add a Mastcam photo URL to CONFIG.stops.",10,h-12);
+}
+function updateStopCard(){
+  const s=stops[selected], k=Math.round(s.y*(N-1))*N+Math.round(s.x*(N-1));
+  $("stopTitle").textContent=(selected===0?"Base: ":selected+". ")+s.name;
+  const box=$("povBox"); box.innerHTML="";
+  if(s.pov){
+    const im=new Image(); im.src=s.pov; im.alt="Surface view near "+s.name; box.appendChild(im);
+    if(s.credit){ const p=document.createElement("p"); p.className="small"; p.textContent=s.credit; box.appendChild(p); }
+  } else {
+    const c=document.createElement("canvas"); c.width=600; c.height=300; box.appendChild(c); drawPOV(c,selected+1);
+  }
+  const ab=route.abort[selected];
+  const rows=[
+    ["Elevation",H[k].toFixed(0)+" m"],["Ground slope",SL[k].toFixed(1)+"°"],
+    ["Mineral signal",MINERALS[MIN[k]]],["Surface temperature",Math.round(TEMP[k])+" °C"]
+  ];
+  if(selected>0) rows.push(["Return to base",ab?fmtMin(ab.time)+" / "+(ab.dist/1000).toFixed(2)+" km":"No safe path"]);
+  $("stopOut").innerHTML=rows.map(r=>`<div><dt>${r[0]}</dt><dd class="mono">${r[1]}</dd></div>`).join("");
+  $("stopGoal").textContent=s.goal;
+  updateBanner();
+}
+function updateBanner(){
+  const b=$("speBanner");
+  if(!spe){ b.hidden=true; return; }
+  const ab=route.abort[selected];
+  b.hidden=false;
+  b.textContent="Solar particle event: return to base now. "+(selected>0&&ab?"From stop "+selected+" the walk back takes about "+fmtMin(ab.time)+".":"Dose rate is multiplied by 5 in this demo.");
+}
+function readout(x,y){
+  const i=clamp(Math.round(x/W*(N-1)),0,N-1), j=clamp(Math.round(y/HH*(N-1)),0,N-1), k=j*N+i;
+  const note=BLOCK[k]?" | boulder":SL[k]>=+$("nogo").value?" | no-go":SL[k]>=+$("caut").value?" | caution":"";
+  $("readout").textContent=`E ${Math.round(i/(N-1)*SIZE)} m  S ${Math.round(j/(N-1)*SIZE)} m | elev ${H[k].toFixed(0)} m | slope ${SL[k].toFixed(1)}° | ${MINERALS[MIN[k]]} | ${Math.round(TEMP[k])} °C${note}`;
+}
+
+/* ---------- wiring ---------- */
+function recompute(){
+  computeRoute(); updateSummary(); updateRadiation(); updateProfile(); updateStopCard(); render();
+}
+function rebuildHazards(){
+  buildSlope(); stops.forEach(snap); recompute(); updateLegend();
+}
+function deriveAll(){
+  computeSlopeShade(); buildOptical(); buildSlope(); buildSpectral(); buildThermal();
+  stops.forEach(snap); recompute(); updateLegend();
+}
+
+function syncLayerUi(){ for(const k of ["slope","spectral","thermal"]) $("O_"+k).parentElement.hidden=!$("L_"+k).checked; }
+["L_slope","L_spectral","L_thermal","L_route","L_grid","showAll"].forEach(id=>$(id).addEventListener("change",()=>{ syncLayerUi(); updateLegend(); render(); }));
+["O_slope","O_spectral","O_thermal"].forEach(id=>$(id).addEventListener("input",render));
+["caut","nogo","speed"].forEach(id=>$(id).addEventListener("change",rebuildHazards));
+["doseRate","doseBudget"].forEach(id=>$(id).addEventListener("input",updateRadiation));
+$("wx").innerHTML=Object.entries(WEATHER).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
+$("wx").addEventListener("change",updateWeather);
+/* Time of day now comes from the main map. Call window.setMarsTime(13.5) to set local solar time (0 to 24),
+   or open this page with ?time=13.5 in the address. Default is 13:00. */
+window.setMarsTime=h=>{
+  hour=clamp(+h||0,0,24);
+  buildThermal(); updateLegend(); updateStopCard(); updateWeather(); render();
+};
+$("btnRoute").addEventListener("click",recompute);
+$("ropts").addEventListener("change",e=>{ if(e.target.name==="rmode") setMode(e.target.value); });
+$("cmp").addEventListener("click",e=>{ const b=e.target.closest("button[data-mode]"); if(b) setMode(b.dataset.mode); });
+$("btnReset").addEventListener("click",()=>{
+  CONFIG.stops.forEach((s,q)=>{ stops[q].x=s.x; stops[q].y=s.y; });
+  stops.forEach(snap); selected=1; recompute();
+});
+$("btnSpe").addEventListener("click",e=>{
+  spe=!spe; e.currentTarget.classList.toggle("on",spe); e.currentTarget.setAttribute("aria-pressed",spe);
+  e.currentTarget.textContent=spe?"Clear solar particle event":"Simulate solar particle event";
+  updateRadiation(); updateBanner();
+});
+
+let drag=-1;
+const evXY=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*HH]; };
+cv.addEventListener("pointerdown",e=>{
+  const [x,y]=evXY(e);
+  for(let q=0;q<stops.length;q++){
+    if(Math.hypot(stops[q].x*W-x,stops[q].y*HH-y)<18){
+      drag=q; selected=q; cv.setPointerCapture(e.pointerId); updateStopCard(); render(); return;
+    }
+  }
+});
+cv.addEventListener("pointermove",e=>{
+  const [x,y]=evXY(e);
+  if(drag>=0){ stops[drag].x=clamp(x/W,.02,.98); stops[drag].y=clamp(y/HH,.02,.98); render(); }
+  readout(x,y);
+});
+cv.addEventListener("pointerup",()=>{ if(drag>=0){ snap(stops[drag]); drag=-1; recompute(); } });
+
+/* ---------- optional real-data overrides ---------- */
+function loadImg(url,cb){
+  const im=new Image(); im.onload=()=>cb(im); im.onerror=()=>console.warn("Could not load "+url); im.src=url;
+}
+function applyOverrides(){
+  const D=CONFIG.data;
+  if(D.optical) loadImg(D.optical,im=>{
+    opticalOverride=true; const c=layers.optical; c.width=c.height=1024;
+    c.getContext("2d").drawImage(im,0,0,1024,1024); render();
+  });
+  if(D.spectral) loadImg(D.spectral,im=>{
+    const c=layers.spectral; c.width=c.height=1024; c.getContext("2d").drawImage(im,0,0,1024,1024); render();
+  });
+  if(D.elevation) loadImg(D.elevation,im=>{
+    try{
+      const t=document.createElement("canvas"); t.width=t.height=N;
+      const g=t.getContext("2d"); g.drawImage(im,0,0,N,N);
+      const px=g.getImageData(0,0,N,N).data;
+      for(let k=0;k<N*N;k++) H[k]=D.elevMin+(px[k*4]/255)*(D.elevMax-D.elevMin);
+      deriveAll();
+    }catch(err){
+      console.warn(err);
+      alert("The elevation image could not be read. Run this page with the VS Code Live Server extension instead of opening the file directly.");
+    }
+  });
+}
+
+/* ---------- start ---------- */
+if(typeof location!=="undefined"){ const tp=parseFloat(new URLSearchParams(location.search).get("time")); if(!isNaN(tp)) hour=clamp(tp,0,24); }
+generateTerrain();
+syncLayerUi();
+deriveAll();
+updateWeather();
+applyOverrides();
+})();
+</script>
+</body>
+</html>
