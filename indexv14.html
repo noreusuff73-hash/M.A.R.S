@@ -135,7 +135,7 @@
         outline: none;
       }
 
-      /* device panel (ESP32 buzzer, messages, voice, shake) */
+      /* device panel (ESP32 buzzer, messages, voice) */
       #devpanel .dvrow {
         display: flex;
         gap: 6px;
@@ -809,7 +809,12 @@
       }
       #tabbar .tab + .tab {
         margin-left: calc(var(--s) * -1 + 3px);
-        clip-path: polygon(0 0, calc(100% - var(--s)) 0, 100% 100%, var(--s) 100%);
+        clip-path: polygon(
+          0 0,
+          calc(100% - var(--s)) 0,
+          100% 100%,
+          var(--s) 100%
+        );
       }
       #tabbar .tab:last-of-type {
         clip-path: polygon(0 0, 100% 0, 100% 100%, var(--s) 100%);
@@ -824,7 +829,11 @@
         color: var(--tx);
       }
       #tabbar .tab.on {
-        background: linear-gradient(to top, var(--cy) 3px, rgba(255, 255, 255, 0.2) 3px);
+        background: linear-gradient(
+          to top,
+          var(--cy) 3px,
+          rgba(255, 255, 255, 0.2) 3px
+        );
         color: var(--tx);
       }
       #tabbar .tab:focus-visible {
@@ -1625,157 +1634,211 @@
     <div id="map"></div>
 
     <div id="leftcol">
-      <div id="tabbox" class="glass" data-title="Control panel" data-icon="gear">
+      <div
+        id="tabbox"
+        class="glass"
+        data-title="Control panel"
+        data-icon="gear"
+      >
         <div id="tabbar" role="tablist" aria-label="Panels">
-          <button type="button" role="tab" class="tab" id="tab_panel" data-tab="panel" data-ti="gear" aria-controls="panel">Control</button>
-          <button type="button" role="tab" class="tab" id="tab_team" data-tab="team" data-ti="users" aria-controls="team">Crew</button>
-          <button type="button" role="tab" class="tab" id="tab_devpanel" data-tab="devpanel" data-ti="device" aria-controls="devpanel">Device</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab"
+            id="tab_panel"
+            data-tab="panel"
+            data-ti="gear"
+            aria-controls="panel"
+          >
+            Control
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab"
+            id="tab_team"
+            data-tab="team"
+            data-ti="users"
+            aria-controls="team"
+          >
+            Crew
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab"
+            id="tab_devpanel"
+            data-tab="devpanel"
+            data-ti="device"
+            aria-controls="devpanel"
+          >
+            Device
+          </button>
         </div>
         <div id="tabbody">
-      <div id="panel" class="tabpage active" role="tabpanel" aria-labelledby="tab_panel">
-        <h1>M.A.R.S</h1>
-        <div class="sub" style="margin-bottom: 4px">
-          Multi-layer Analysis &amp; Rendering System
-        </div>
-        <div class="sub">
-          Left-click a marker for info. Right-click the map or a marker to add a
-          route point.
-        </div>
+          <div
+            id="panel"
+            class="tabpage active"
+            role="tabpanel"
+            aria-labelledby="tab_panel"
+          >
+            <h1>M.A.R.S</h1>
+            <div class="sub" style="margin-bottom: 4px">
+              Multi-layer Analysis &amp; Rendering System
+            </div>
+            <div class="sub">
+              Left-click a marker for info. Right-click the map or a marker to
+              add a route point.
+            </div>
 
-        <div
-          id="imgwarn"
-          style="
-            display: none;
-            color: #ff7b7b;
-            font-size: 12px;
-            margin-top: 8px;
-          "
-        >
-          Surface imagery could not load from NASA Mars Trek. Check your
-          connection, then press F12 and look for red .jpg requests in the
-          Network tab.
-        </div>
-        <h2>Layers</h2>
-        <label
-          ><input type="checkbox" id="elevationLayer" /> Elevation colour
-          (MOLA)</label
-        >
+            <div
+              id="imgwarn"
+              style="
+                display: none;
+                color: #ff7b7b;
+                font-size: 12px;
+                margin-top: 8px;
+              "
+            >
+              Surface imagery could not load from NASA Mars Trek. Check your
+              connection, then press F12 and look for red .jpg requests in the
+              Network tab.
+            </div>
+            <h2>Layers</h2>
+            <label
+              ><input type="checkbox" id="elevationLayer" /> Elevation colour
+              (MOLA)</label
+            >
 
-        <h2>Elevation <span class="tag" id="elevTag">DEMO MODEL</span></h2>
-        <div id="elevText">Move or tap the map.</div>
-        <div class="meter"><i id="elevMark"></i></div>
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            color: var(--mut);
-          "
-        >
-          <span id="rMin">-3000 m</span><span id="rMax">+1500 m</span>
-        </div>
+            <h2>Elevation <span class="tag" id="elevTag">DEMO MODEL</span></h2>
+            <div id="elevText">Move or tap the map.</div>
+            <div class="meter"><i id="elevMark"></i></div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: var(--mut);
+              "
+            >
+              <span id="rMin">-3000 m</span><span id="rMax">+1500 m</span>
+            </div>
 
-        <h2>Route</h2>
-        <div id="pathmode" role="group" aria-label="Path style">
-          <button data-pm="straight" class="on" aria-pressed="true">
-            Straight
-          </button>
-          <button data-pm="safe" aria-pressed="false">Safest</button>
-          <button data-pm="bal" aria-pressed="false">Balanced</button>
-          <button data-pm="fast" aria-pressed="false">Fastest</button>
-        </div>
-        <div id="stats">
-          Right-click the map or a marker to add route points.
-        </div>
-        <canvas id="profile" width="500" height="180"></canvas>
-        <button id="undo">Undo point</button>
-        <button id="clear">Clear route</button>
-      </div>
+            <h2>Route</h2>
+            <div id="pathmode" role="group" aria-label="Path style">
+              <button data-pm="straight" class="on" aria-pressed="true">
+                Straight
+              </button>
+              <button data-pm="safe" aria-pressed="false">Safest</button>
+              <button data-pm="bal" aria-pressed="false">Balanced</button>
+              <button data-pm="fast" aria-pressed="false">Fastest</button>
+            </div>
+            <div id="stats">
+              Right-click the map or a marker to add route points.
+            </div>
+            <canvas id="profile" width="500" height="180"></canvas>
+            <button id="undo">Undo point</button>
+            <button id="clear">Clear route</button>
+          </div>
 
-      <div id="team" class="tabpage" role="tabpanel" aria-labelledby="tab_team">
-        <h1>Crew</h1>
-        <div class="sub" id="linkState">Starting...</div>
-        <div id="crew"></div>
-        <button id="crewadd">+ Add crew member</button>
-        <h2>Spawnpoints</h2>
-        <div id="splist"></div>
-        <button id="spadd">+ Add spawnpoint</button>
-      </div>
+          <div
+            id="team"
+            class="tabpage"
+            role="tabpanel"
+            aria-labelledby="tab_team"
+          >
+            <h1>Crew</h1>
+            <div class="sub" id="linkState">Starting...</div>
+            <div id="crew"></div>
+            <button id="crewadd">+ Add crew member</button>
+            <h2>Spawnpoints</h2>
+            <div id="splist"></div>
+            <button id="spadd">+ Add spawnpoint</button>
+          </div>
 
-      <div id="devpanel" class="tabpage" role="tabpanel" aria-labelledby="tab_devpanel">
-        <h1>Device</h1>
-        <div class="sub" style="margin-top: 4px">
-          <span class="dvdot" id="dv_dot"></span
-          ><span id="dv_conn">ESP32 not connected</span>
-        </div>
-        <div class="dvrow">
-          <button id="dv_ble">Connect ESP32</button>
-          <button id="dv_test">Test buzzer</button>
-        </div>
-        <h2>Emergency</h2>
-        <div class="sub" style="margin: 0 0 6px">
-          Hold 1.5 seconds to alert the crew and sound the buzzer.
-        </div>
-        <button id="sos"><i></i><span>Hold for SOS</span></button>
-        <button id="sosoff" style="display: none">Cancel SOS</button>
-        <h2>Messages</h2>
-        <div class="dvlbl" style="color: #7bd88f"><b>GREEN · 1 beep</b></div>
-        <div class="dvrow">
-          <button class="dvq g" data-q="AFFIRMATIVE" data-ty="GOOD">
-            AFFIRMATIVE
-          </button>
-          <button class="dvq g" data-q="ROUTE SAFE" data-ty="GOOD">
-            ROUTE SAFE
-          </button>
-          <button class="dvq g" data-q="RETURNING TO HAB" data-ty="GOOD">
-            RETURNING TO HAB
-          </button>
-          <button class="dvq g" data-q="SAMPLE COLLECTED" data-ty="GOOD">
-            SAMPLE COLLECTED
-          </button>
-        </div>
-        <div class="dvlbl" style="color: #ffb347"><b>AMBER · 2 beeps</b></div>
-        <div class="dvrow">
-          <button class="dvq a" data-q="LOW OXYGEN" data-ty="WARN">
-            LOW OXYGEN
-          </button>
-          <button class="dvq a" data-q="NEED ASSISTANCE" data-ty="WARN">
-            NEED ASSISTANCE
-          </button>
-          <button class="dvq a" data-q="RADIATION ALERT" data-ty="WARN">
-            RADIATION ALERT
-          </button>
-          <button class="dvq a" data-q="DUST STORM" data-ty="WARN">
-            DUST STORM
-          </button>
-        </div>
-        <div class="sub" style="margin-top: 6px">
-          Custom message below: blue, 1 beep. SOS: red, Morse code.
-        </div>
-        <div class="dvrow">
-          <input
-            id="dv_txt"
-            maxlength="32"
-            placeholder="Message (max 32 characters)"
-            autocomplete="off"
-          />
-          <button id="dv_send" style="flex: 0 0 auto">Send</button>
-        </div>
-        <div class="dvbox" id="dv_log">No messages yet.</div>
-        <h2>Extra SOS triggers</h2>
-        <div class="dvrow">
-          <button id="dv_mic">Voice: off</button>
-          <button id="dv_shk">Shake: off</button>
-        </div>
-        <div class="dvbox" id="dv_heard">
-          Voice and shake start a 5 second countdown you can cancel. The SOS
-          button always works.
-        </div>
-        <div class="dvbox" id="dv_help" hidden></div>
-        <div class="dvbox" id="dv_msg">
-          Connect the ESP32, then press SOS. The buzzer makes the Morse sound.
-        </div>
-      </div>
+          <div
+            id="devpanel"
+            class="tabpage"
+            role="tabpanel"
+            aria-labelledby="tab_devpanel"
+          >
+            <h1>Device</h1>
+            <div class="sub" style="margin-top: 4px">
+              <span class="dvdot" id="dv_dot"></span
+              ><span id="dv_conn">ESP32 not connected</span>
+            </div>
+            <div class="dvrow">
+              <button id="dv_ble">Connect ESP32</button>
+              <button id="dv_test">Test buzzer</button>
+            </div>
+            <h2>Emergency</h2>
+            <div class="sub" style="margin: 0 0 6px">
+              Hold 1.5 seconds to alert the crew and sound the buzzer.
+            </div>
+            <button id="sos"><i></i><span>Hold for SOS</span></button>
+            <button id="sosoff" style="display: none">Cancel SOS</button>
+            <h2>Messages</h2>
+            <div class="dvlbl" style="color: #7bd88f">
+              <b>GREEN · 1 beep</b>
+            </div>
+            <div class="dvrow">
+              <button class="dvq g" data-q="AFFIRMATIVE" data-ty="GOOD">
+                AFFIRMATIVE
+              </button>
+              <button class="dvq g" data-q="ROUTE SAFE" data-ty="GOOD">
+                ROUTE SAFE
+              </button>
+              <button class="dvq g" data-q="RETURNING TO HAB" data-ty="GOOD">
+                RETURNING TO HAB
+              </button>
+              <button class="dvq g" data-q="SAMPLE COLLECTED" data-ty="GOOD">
+                SAMPLE COLLECTED
+              </button>
+            </div>
+            <div class="dvlbl" style="color: #ffb347">
+              <b>AMBER · 2 beeps</b>
+            </div>
+            <div class="dvrow">
+              <button class="dvq a" data-q="LOW OXYGEN" data-ty="WARN">
+                LOW OXYGEN
+              </button>
+              <button class="dvq a" data-q="NEED ASSISTANCE" data-ty="WARN">
+                NEED ASSISTANCE
+              </button>
+              <button class="dvq a" data-q="RADIATION ALERT" data-ty="WARN">
+                RADIATION ALERT
+              </button>
+              <button class="dvq a" data-q="DUST STORM" data-ty="WARN">
+                DUST STORM
+              </button>
+            </div>
+            <div class="sub" style="margin-top: 6px">
+              Custom message below: blue, 1 beep. SOS: red, Morse code.
+            </div>
+            <div class="dvrow">
+              <input
+                id="dv_txt"
+                maxlength="32"
+                placeholder="Message (max 32 characters)"
+                autocomplete="off"
+              />
+              <button id="dv_send" style="flex: 0 0 auto">Send</button>
+            </div>
+            <div class="dvbox" id="dv_log">No messages yet.</div>
+            <h2>Extra SOS triggers</h2>
+            <div class="dvrow">
+              <button id="dv_mic">Voice: off</button>
+            </div>
+            <div class="dvbox" id="dv_heard">
+              Voice starts a 5 second countdown you can cancel. The SOS button
+              always works.
+            </div>
+            <div class="dvbox" id="dv_help" hidden></div>
+            <div class="dvbox" id="dv_msg">
+              Connect the ESP32, then press SOS. The buzzer makes the Morse
+              sound.
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -7354,14 +7417,18 @@
       // ---------- TABS: Control / Crew / Device in one panel ----------
       (() => {
         const tabs = [...document.querySelectorAll("#tabbar .tab")];
-        tabs.forEach((t) => t.insertAdjacentHTML("afterbegin", ICONS[t.dataset.ti]));
+        tabs.forEach((t) =>
+          t.insertAdjacentHTML("afterbegin", ICONS[t.dataset.ti]),
+        );
         function show(id) {
           tabs.forEach((t) => {
             const on = t.dataset.tab === id;
             t.classList.toggle("on", on);
             t.setAttribute("aria-selected", on);
             t.tabIndex = on ? 0 : -1;
-            document.getElementById(t.dataset.tab).classList.toggle("active", on);
+            document
+              .getElementById(t.dataset.tab)
+              .classList.toggle("active", on);
           });
           try {
             sessionStorage.setItem("marswalk-tab", id);
@@ -7370,7 +7437,8 @@
         tabs.forEach((t, i) => {
           t.onclick = () => show(t.dataset.tab);
           t.onkeydown = (e) => {
-            const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+            const d =
+              e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
             if (!d) return;
             e.preventDefault();
             const n = tabs[(i + d + tabs.length) % tabs.length];
@@ -7385,10 +7453,16 @@
         show(tabs.some((t) => t.dataset.tab === saved) ? saved : "panel");
         // a red dot on a tab means an SOS is active and that tab has the controls for it
         const mark = () => {
-          const crew = getComputedStyle(document.getElementById("sosbar")).display !== "none",
-            mine = getComputedStyle(document.getElementById("sosoff")).display !== "none";
+          const crew =
+              getComputedStyle(document.getElementById("sosbar")).display !==
+              "none",
+            mine =
+              getComputedStyle(document.getElementById("sosoff")).display !==
+              "none";
           document.getElementById("tab_team").classList.toggle("alert", crew);
-          document.getElementById("tab_devpanel").classList.toggle("alert", mine);
+          document
+            .getElementById("tab_devpanel")
+            .classList.toggle("alert", mine);
         };
         ["sosbar", "sosoff"].forEach((id) =>
           new MutationObserver(mark).observe(document.getElementById(id), {
@@ -7976,7 +8050,7 @@
         });
         sosTimer = setTimeout(activateSos, 1500);
       }
-      // used by the hold button, the voice/shake countdown and the ESP32 button
+      // used by the hold button, the voice countdown and the ESP32 button
       function activateSos() {
         if (me.sos) return;
         me.sos = true;
@@ -8017,7 +8091,7 @@
       sos.addEventListener("keyup", sosStop);
       sosoff.onclick = cancelSos;
 
-      // ---------- DEVICE: ESP32 buzzer + LCD over Bluetooth, plus voice and shake triggers ----------
+      // ---------- DEVICE: ESP32 buzzer + LCD over Bluetooth, plus voice trigger ----------
       // Messages sent to the ESP32 (one line each): SOS, STOP, TEST, MSG:<up to 32 plain characters>
       (() => {
         const q = (s) => document.querySelector(s);
@@ -8031,8 +8105,6 @@
           manual = false,
           rec = null,
           voiceOn = false,
-          shakeOn = false,
-          hits = [],
           cd = null,
           toastT = null,
           txBuf = "";
@@ -8055,12 +8127,10 @@
           q("#dv_ble").textContent = ok ? "Disconnect" : "Connect ESP32";
           q("#dv_mic").classList.toggle("on", voiceOn);
           q("#dv_mic").textContent = voiceOn ? "Voice: on" : "Voice: off";
-          q("#dv_shk").classList.toggle("on", shakeOn);
-          q("#dv_shk").textContent = shakeOn ? "Shake: on" : "Shake: off";
         }
         if (!isSecureContext)
           note(
-            "This page is not on https, so Bluetooth, voice and motion will be blocked. Host it on https (for example Netlify).",
+            "This page is not on https, so Bluetooth and voice will be blocked. Host it on https (for example Netlify).",
           );
 
         /* ---- Bluetooth (writes go through a queue so messages never interleave) ---- */
@@ -8086,7 +8156,7 @@
           if (!TYPES.includes(type)) type = "MSG";
           return rx && t ? write(type + ":" + t) : Promise.resolve(false);
         };
-        // drop every GATT reference so the phone really lets go of the ESP32
+        // drop every GATT reference so the device really lets go of the ESP32
         async function release() {
           clearTimeout(retryT);
           retryT = null;
@@ -8188,7 +8258,7 @@
           if (await write("TEST")) note("Test sent: the buzzer beeps once.");
         };
 
-        /* ---- toast (messages and the voice/shake countdown) ---- */
+        /* ---- toast (messages and the voice countdown) ---- */
         function toast(html, ms) {
           const t = q("#dv_toast");
           t.innerHTML = html;
@@ -8215,7 +8285,7 @@
           if (log.length > 4) log.shift();
           drawLog();
           note("Sent to the crew: " + text);
-          if (!fromDevice) lcd(text, type); // shows on your own LCD too, so a one-phone demo still works
+          if (!fromDevice) lcd(text, type); // shows on your own LCD too, so a single-device demo still works
         }
         function onChat(m) {
           if (typeof m.id !== "string" || m.id === myId || seenMsg.has(m.mid))
@@ -8251,7 +8321,7 @@
               (b.onclick = () => sendChat(b.dataset.q, false, b.dataset.ty)),
           );
 
-        /* ---- voice and shake: 5 second countdown so an accident can be cancelled ---- */
+        /* ---- voice: 5 second countdown so an accident can be cancelled ---- */
         function countdown(src) {
           if (me.sos || cd) return;
           let n = 5;
@@ -8307,7 +8377,7 @@
           const R = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (!R)
             return note(
-              "This browser has no speech recognition. Use Chrome, or use the SOS button or Shake.",
+              "This browser has no speech recognition. Use Chrome, or use the SOS button.",
             );
           if (!isSecureContext) return micHelp({ name: "not https" });
           try {
@@ -8360,42 +8430,6 @@
           note("Listening. Say \u201cSOS\u201d or \u201cmayday\u201d.");
         }
         q("#dv_mic").onclick = () => (voiceOn ? voiceStop() : voiceStart());
-        function onMotion(e) {
-          const a = e.accelerationIncludingGravity;
-          if (!a) return;
-          const m = Math.hypot(a.x || 0, a.y || 0, a.z || 0),
-            n = Date.now();
-          if (m > 28) {
-            hits = hits.filter((t) => n - t < 1500);
-            hits.push(n);
-            if (hits.length >= 4 && !me.sos) {
-              hits = [];
-              countdown("shake");
-            }
-          }
-        }
-        q("#dv_shk").onclick = async () => {
-          if (shakeOn) {
-            removeEventListener("devicemotion", onMotion);
-            shakeOn = false;
-            ui();
-            return;
-          }
-          try {
-            if (
-              typeof DeviceMotionEvent !== "undefined" &&
-              DeviceMotionEvent.requestPermission &&
-              (await DeviceMotionEvent.requestPermission()) !== "granted"
-            )
-              return note("Motion permission denied.");
-            addEventListener("devicemotion", onMotion);
-            shakeOn = true;
-            ui();
-            note("Shake the phone hard 4 times to start an SOS countdown.");
-          } catch (e) {
-            note("Shake: " + e.message);
-          }
-        };
 
         /* ---- hooks used by the rest of the app ---- */
         window.marsDevice = {
